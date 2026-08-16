@@ -36,6 +36,7 @@
   let pollTimer = null;
   let lastBoardLedState = null;
   let lastBoardDarkState = null;
+  let simulatedDisconnected = false;
 
   function parseBooleanValue(value, fallback = false) {
     if (typeof value === 'boolean') return value;
@@ -49,6 +50,25 @@
     return Boolean(value ?? fallback);
   }
 
+  function syncSimulateButtonState() {
+    if (!simulateBtn) return;
+
+    if (simulatedDisconnected) {
+      simulateBtn.textContent = 'DISCONNECTED';
+      simulateBtn.classList.add('disconnected');
+      return;
+    }
+
+    if (statusEl.textContent === 'CONNECTED') {
+      simulateBtn.textContent = 'DISCONNECT';
+      simulateBtn.classList.remove('disconnected');
+      return;
+    }
+
+    simulateBtn.textContent = 'CONNECT';
+    simulateBtn.classList.remove('disconnected');
+  }
+
   function setConnectionState(text, ok) {
     statusEl.textContent = text;
     statusEl.style.color = ok ? '#00efb5' : '#7d8ea5';
@@ -56,6 +76,7 @@
     espIconWrap.innerHTML = ok ? espConnectedSvg : espDisconnectedSvg;
     statusRow.classList.toggle('connected', ok);
     statusRow.classList.toggle('disconnected', !ok);
+    syncSimulateButtonState();
   }
 
   ldrIconWrap.innerHTML = ldrOffSvg;
@@ -146,6 +167,11 @@
   }
 
   async function fetchStatus() {
+    if (simulatedDisconnected) {
+      setConnectionState('DISCONNECTED', false);
+      return;
+    }
+
     const url = `${deviceUrl}/api/status`;
     try {
       const res = await fetch(url, { cache: 'no-store' });
@@ -210,31 +236,26 @@
     clearInterval(pollTimer);
     lastBoardLedState = null;
     lastBoardDarkState = null;
+    simulatedDisconnected = true;
     setConnectionState('DISCONNECTED', false);
     if (manualToggle) {
       manualToggle.disabled = true;
       manualToggle.setAttribute('aria-disabled', 'true');
-    }
-    if (simulateBtn) {
-      simulateBtn.textContent = 'DISCONNECTED';
-      simulateBtn.classList.add('disconnected');
     }
   }
 
   function connectDevice() {
     deviceUrl = deviceIpInput.value.trim();
     if (!deviceUrl) {
+      simulatedDisconnected = false;
       setConnectionState('NOT CONNECTED', false);
       return;
     }
+    simulatedDisconnected = false;
     localStorage.setItem('smartlamp-ip', deviceUrl);
     if (manualToggle) {
       manualToggle.disabled = false;
       manualToggle.setAttribute('aria-disabled', 'false');
-    }
-    if (simulateBtn) {
-      simulateBtn.textContent = 'DISCONNECT';
-      simulateBtn.classList.remove('disconnected');
     }
     setConnectionState('CONNECTED', true);
     startPolling();
@@ -359,16 +380,13 @@
   });
 
   if (simulateBtn) {
-    simulateBtn.textContent = 'CONNECT';
-    simulateBtn.classList.remove('disconnected');
+    syncSimulateButtonState();
     simulateBtn.addEventListener('click', () => {
-      if (simulateBtn.textContent === 'CONNECT') {
-        connectDevice();
+      if (statusEl.textContent === 'CONNECTED' || simulateBtn.textContent === 'DISCONNECT') {
+        disconnectDevice();
         return;
       }
-      if (simulateBtn.textContent === 'DISCONNECT') {
-        disconnectDevice();
-      }
+      connectDevice();
     });
   }
 })();
