@@ -32,6 +32,8 @@
 
   let deviceUrl = localStorage.getItem('smartlamp-ip') || 'http://192.168.1.20';
   let pollTimer = null;
+  let lastBoardLedState = null;
+  let lastBoardDarkState = null;
 
   function parseBooleanValue(value, fallback = false) {
     if (typeof value === 'boolean') return value;
@@ -62,10 +64,13 @@
 
   function updateLampState(isOn) {
     if (!lampIcon) return;
-    lampIcon.innerHTML = isOn ? lampOnSvg : lampOffSvg;
+    if (!lampIcon.querySelector('svg')) {
+      lampIcon.innerHTML = lampOffSvg;
+    }
     const lampSvg = lampIcon.querySelector('svg');
     if (lampSvg) {
       lampSvg.classList.toggle('is-on', Boolean(isOn));
+      lampSvg.classList.toggle('is-off', !isOn);
       lampSvg.style.color = isOn ? '#fbbf24' : '#4a6080';
       lampSvg.style.filter = isOn ? 'drop-shadow(0 0 12px rgba(251, 191, 36, 0.9))' : 'none';
     }
@@ -75,11 +80,24 @@
     const ldrColor = lightOn ? ldrLightColor : ldrDarkColor;
     ldrIconWrap.style.color = ldrColor;
     ldrIconWrap.style.filter = 'none';
-    ldrIconWrap.innerHTML = lightOn ? ldrOnSvg : ldrOffSvg;
+    if (!ldrIconWrap.querySelector('svg')) {
+      ldrIconWrap.innerHTML = lightOn ? ldrOnSvg : ldrOffSvg;
+    } else {
+      const ldrSvg = ldrIconWrap.querySelector('svg');
+      ldrSvg.setAttribute('stroke', ldrColor);
+      ldrSvg.style.color = ldrColor;
+    }
     ldrLabel.style.color = ldrColor;
 
     ledIconWrap.style.color = ledOn ? '#fbbf24' : '#8a97a7';
-    ledIconWrap.innerHTML = ledOn ? ledOnSvg : ledOffSvg;
+    if (!ledIconWrap.querySelector('svg')) {
+      ledIconWrap.innerHTML = ledOn ? ledOnSvg : ledOffSvg;
+    }
+    const ledSvg = ledIconWrap.querySelector('svg');
+    if (ledSvg) {
+      ledSvg.classList.toggle('on', Boolean(ledOn));
+      ledSvg.classList.toggle('is-off', !ledOn);
+    }
 
     const ledBulb = document.querySelector('.led-bulb');
     if (ledBulb) {
@@ -130,6 +148,18 @@
       const boardDarkState = parseBooleanValue(data.dark ?? data.light ?? data.mode ?? false);
       const isDark = boardDarkState === true || (typeof data.dark === 'string' && data.dark.toLowerCase() === 'dark');
 
+      if (
+        lastBoardLedState !== null &&
+        lastBoardDarkState !== null &&
+        boardLedState === lastBoardLedState &&
+        isDark === lastBoardDarkState
+      ) {
+        setConnectionState('CONNECTED', true);
+        return;
+      }
+
+      lastBoardLedState = boardLedState;
+      lastBoardDarkState = isDark;
       setConnectionState('CONNECTED', true);
 
       if (currentMode === 'manual') {
@@ -148,7 +178,13 @@
       }
 
       manualPowerOn = boardLedState;
-      setManualPowerState(false);
+      if (manualState) {
+        manualState.textContent = 'LOCKED';
+        manualState.style.color = 'rgba(164, 176, 188, 0.8)';
+      }
+      if (manualToggle) {
+        manualToggle.classList.toggle('on', Boolean(boardLedState));
+      }
       updateLdr(data.ldr ?? 0, boardLedState, isDark, 'auto');
     } catch (error) {
       setConnectionState('DISCONNECTED', false);
@@ -217,7 +253,7 @@
 
     if (mode === 'auto') {
       if (manualToggle) {
-        manualToggle.classList.remove('on');
+        manualToggle.classList.toggle('on', Boolean(manualPowerOn));
       }
       if (manualState) {
         manualState.textContent = 'LOCKED';
