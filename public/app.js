@@ -7,6 +7,7 @@
   const ledStatus = document.getElementById('ledStatus');
   const deviceIpInput = document.getElementById('deviceIp');
   const connectBtn = document.getElementById('connectBtn');
+  const simulateBtn = document.querySelector('.simulate-btn');
   const espIconWrap = document.getElementById('espIconWrap');
   const ldrIconWrap = document.getElementById('ldrIconWrap');
   const ledIconWrap = document.getElementById('ledIconWrap');
@@ -23,12 +24,13 @@
   const espDisconnectedSvg = `<svg class="tiny-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="2" x2="22" y2="22"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 4.17-2.65"/><path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76"/><path d="M16.85 11.25a10 10 0 0 1 2.22 1.68"/><path d="M5 12.55a11 11 0 0 1 5.29-2.93"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>`;
   const ldrOnSvg = `<svg class="tiny-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>`;
   const ldrOffSvg = `<svg class="tiny-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>`;
-  const ledOnSvg = `<svg class="tiny-icon led-icon-svg on" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" style="filter: drop-shadow(0 0 8px rgba(251,191,36,0.9));"><path d="M13 2 3 14h7l-1 8 10-12h-8l1-8z" fill="#fbbf24" stroke="#fbbf24" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
-  const ledOffSvg = `<svg class="tiny-icon led-icon-svg" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="12.41 6.75 13 2 10.57 4.92"/><polyline points="18.57 12.91 21 10 15.66 10"/><polyline points="8 8 3 14 12 14 11 22 16.85 15.85"/><line x1="2" y1="2" x2="22" y2="22"/></svg>`;
+  const ledOnSvg = `<svg class="tiny-icon led-icon-svg on" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 2 3 14h7l-1 8 10-12h-8l1-8z" fill="#fbbf24" stroke="#fbbf24" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  const ledOffSvg = `<svg class="tiny-icon led-icon-svg" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 2 3 14h7l-1 8 10-12h-8l1-8z" fill="#a1afbf" stroke="#a1afbf" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
   const lampOffSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" style="color:#4a6080"><path d="M9 21h6M9 18h6M15.7 14.55A6 6 0 0 0 18 9a6 6 0 1 0-12 0c0 2.17 1.16 4.07 2.9 5.12L9 17h6l.7-2.45z" fill="currentColor" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"/></svg>`;
   const lampOnSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" style="color:#fbbf24; filter: drop-shadow(0 0 10px rgba(251,191,36,0.9));"><path d="M9 21h6M9 18h6M15.7 14.55A6 6 0 0 0 18 9a6 6 0 1 0-12 0c0 2.17 1.16 4.07 2.9 5.12L9 17h6l.7-2.45z" fill="currentColor" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"/></svg>`;
   const ldrDarkColor = '#5aa7ff';
   const ldrLightColor = '#fbbf24';
+  const coolGrey = '#a1afbf';
 
   let deviceUrl = localStorage.getItem('smartlamp-ip') || 'http://192.168.1.20';
   let pollTimer = null;
@@ -60,7 +62,7 @@
   ledIconWrap.innerHTML = ledOffSvg;
   lampIcon.innerHTML = lampOffSvg;
   updateLampState(false);
-  setConnectionState('DISCONNECTED', false);
+  setConnectionState('NOT CONNECTED', false);
 
   function updateLampState(isOn) {
     if (!lampIcon) return;
@@ -80,23 +82,29 @@
     const ldrColor = lightOn ? ldrLightColor : ldrDarkColor;
     ldrIconWrap.style.color = ldrColor;
     ldrIconWrap.style.filter = 'none';
-    if (!ldrIconWrap.querySelector('svg')) {
-      ldrIconWrap.innerHTML = lightOn ? ldrOnSvg : ldrOffSvg;
-    } else {
-      const ldrSvg = ldrIconWrap.querySelector('svg');
-      ldrSvg.setAttribute('stroke', ldrColor);
+    ldrIconWrap.innerHTML = lightOn ? ldrOnSvg : ldrOffSvg;
+    const ldrSvg = ldrIconWrap.querySelector('svg');
+    if (ldrSvg) {
       ldrSvg.style.color = ldrColor;
+      ldrSvg.setAttribute('stroke', ldrColor);
+      ldrSvg.style.filter = lightOn ? 'drop-shadow(0 0 8px rgba(251, 191, 36, 0.7))' : 'drop-shadow(0 0 8px rgba(90, 167, 255, 0.45))';
     }
     ldrLabel.style.color = ldrColor;
 
-    ledIconWrap.style.color = ledOn ? '#fbbf24' : '#8a97a7';
+    ledIconWrap.style.color = ledOn ? '#fbbf24' : coolGrey;
     if (!ledIconWrap.querySelector('svg')) {
       ledIconWrap.innerHTML = ledOn ? ledOnSvg : ledOffSvg;
     }
     const ledSvg = ledIconWrap.querySelector('svg');
     if (ledSvg) {
+      ledSvg.style.color = ledOn ? '#fbbf24' : coolGrey;
       ledSvg.classList.toggle('on', Boolean(ledOn));
       ledSvg.classList.toggle('is-off', !ledOn);
+      const path = ledSvg.querySelector('path');
+      if (path) {
+        path.setAttribute('fill', ledOn ? '#fbbf24' : coolGrey);
+        path.setAttribute('stroke', ledOn ? '#fbbf24' : coolGrey);
+      }
     }
 
     const ledBulb = document.querySelector('.led-bulb');
@@ -118,7 +126,7 @@
       ldrLabel.style.color = ledOn ? ldrLightColor : ldrDarkColor;
       updateIcons(ledOn, ledOn);
       ledStatus.textContent = ledOn ? 'ON' : 'OFF';
-      ledStatus.style.color = ledOn ? '#fbbf24' : '#7d8790';
+      ledStatus.style.color = ledOn ? '#fbbf24' : coolGrey;
       return;
     }
 
@@ -134,7 +142,7 @@
     updateIcons(lightOn, ledOn);
 
     ledStatus.textContent = ledOn ? 'ON' : 'OFF';
-    ledStatus.style.color = ledOn ? '#fbbf24' : '#7d8790';
+    ledStatus.style.color = ledOn ? '#fbbf24' : coolGrey;
   }
 
   async function fetchStatus() {
@@ -196,6 +204,40 @@
     clearInterval(pollTimer);
     fetchStatus();
     pollTimer = setInterval(fetchStatus, 1000);
+  }
+
+  function disconnectDevice() {
+    clearInterval(pollTimer);
+    lastBoardLedState = null;
+    lastBoardDarkState = null;
+    setConnectionState('DISCONNECTED', false);
+    if (manualToggle) {
+      manualToggle.disabled = true;
+      manualToggle.setAttribute('aria-disabled', 'true');
+    }
+    if (simulateBtn) {
+      simulateBtn.textContent = 'DISCONNECTED';
+      simulateBtn.classList.add('disconnected');
+    }
+  }
+
+  function connectDevice() {
+    deviceUrl = deviceIpInput.value.trim();
+    if (!deviceUrl) {
+      setConnectionState('NOT CONNECTED', false);
+      return;
+    }
+    localStorage.setItem('smartlamp-ip', deviceUrl);
+    if (manualToggle) {
+      manualToggle.disabled = false;
+      manualToggle.setAttribute('aria-disabled', 'false');
+    }
+    if (simulateBtn) {
+      simulateBtn.textContent = 'DISCONNECT';
+      simulateBtn.classList.remove('disconnected');
+    }
+    setConnectionState('CONNECTED', true);
+    startPolling();
   }
 
   let manualPowerOn = false;
@@ -313,12 +355,20 @@
   deviceIpInput.value = deviceUrl;
 
   connectBtn.addEventListener('click', () => {
-    deviceUrl = deviceIpInput.value.trim();
-    if (!deviceUrl) {
-      setConnectionState('DISCONNECTED', false);
-      return;
-    }
-    localStorage.setItem('smartlamp-ip', deviceUrl);
-    startPolling();
+    connectDevice();
   });
+
+  if (simulateBtn) {
+    simulateBtn.textContent = 'CONNECT';
+    simulateBtn.classList.remove('disconnected');
+    simulateBtn.addEventListener('click', () => {
+      if (simulateBtn.textContent === 'CONNECT') {
+        connectDevice();
+        return;
+      }
+      if (simulateBtn.textContent === 'DISCONNECT') {
+        disconnectDevice();
+      }
+    });
+  }
 })();
