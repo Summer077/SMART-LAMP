@@ -37,6 +37,7 @@
   let lastBoardLedState = null;
   let lastBoardDarkState = null;
   let simulatedDisconnected = false;
+  let userConnected = false;
 
   function parseBooleanValue(value, fallback = false) {
     if (typeof value === 'boolean') return value;
@@ -53,20 +54,16 @@
   function syncSimulateButtonState() {
     if (!simulateBtn) return;
 
-    if (simulatedDisconnected) {
+    if (!userConnected || simulatedDisconnected) {
       simulateBtn.textContent = 'DISCONNECTED';
       simulateBtn.classList.add('disconnected');
+      simulateBtn.disabled = true;
       return;
     }
 
-    if (statusEl.textContent === 'CONNECTED') {
-      simulateBtn.textContent = 'DISCONNECT';
-      simulateBtn.classList.remove('disconnected');
-      return;
-    }
-
-    simulateBtn.textContent = 'CONNECT';
+    simulateBtn.textContent = 'DISCONNECT';
     simulateBtn.classList.remove('disconnected');
+    simulateBtn.disabled = false;
   }
 
   function setConnectionState(text, ok) {
@@ -167,7 +164,7 @@
   }
 
   async function fetchStatus() {
-    if (simulatedDisconnected) {
+    if (!userConnected || simulatedDisconnected) {
       setConnectionState('DISCONNECTED', false);
       return;
     }
@@ -232,32 +229,95 @@
     pollTimer = setInterval(fetchStatus, 1000);
   }
 
-  function disconnectDevice() {
+  async function disconnectDevice() {
     clearInterval(pollTimer);
     lastBoardLedState = null;
     lastBoardDarkState = null;
     simulatedDisconnected = true;
+    userConnected = false;
+    manualPowerOn = false;
+
+    if (deviceUrl) {
+      if (currentMode === 'auto') {
+        try {
+          await fetch(`${deviceUrl}/api/manual`, {
+            method: 'POST',
+            cache: 'no-store'
+          });
+        } catch (error) {
+          console.warn('Failed to switch ESP to manual before disconnect off.', error);
+        }
+      }
+
+      try {
+        await fetch(`${deviceUrl}/api/led/off`, {
+          method: 'POST',
+          cache: 'no-store'
+        });
+      } catch (error) {
+        console.warn('Failed to turn the ESP LED off during disconnect.', error);
+      }
+    }
+
+    if (currentMode === 'manual') {
+      const autoButton = Array.from(modeButtons).find((btn) => btn.dataset.mode === 'auto');
+      if (autoButton) {
+        modeButtons.forEach((btn) => btn.classList.toggle('active', btn === autoButton));
+      }
+      setModeState('auto');
+    }
+
+    setManualPowerState(false);
+    updateIcons(false, false);
+    updateLampState(false);
+    ldrValueEl.textContent = '--';
+    ldrBarEl.style.width = '0%';
+    ldrLabel.textContent = 'DARK';
+    ldrLabel.style.color = ldrDarkColor;
+    ledStatus.textContent = 'OFF';
+    ledStatus.style.color = coolGrey;
     setConnectionState('DISCONNECTED', false);
     if (manualToggle) {
       manualToggle.disabled = true;
       manualToggle.setAttribute('aria-disabled', 'true');
     }
+    syncSimulateButtonState();
   }
 
   function connectDevice() {
     deviceUrl = deviceIpInput.value.trim();
     if (!deviceUrl) {
       simulatedDisconnected = false;
+      userConnected = false;
       setConnectionState('NOT CONNECTED', false);
       return;
     }
     simulatedDisconnected = false;
+    userConnected = true;
+    lastBoardLedState = null;
+    lastBoardDarkState = null;
+    pendingManualState = null;
+    manualPowerOn = false;
+    ldrValueEl.textContent = '--';
+    ldrBarEl.style.width = '0%';
+    ldrLabel.textContent = 'DARK';
+    ldrLabel.style.color = ldrDarkColor;
     localStorage.setItem('smartlamp-ip', deviceUrl);
     if (manualToggle) {
       manualToggle.disabled = false;
       manualToggle.setAttribute('aria-disabled', 'false');
     }
+    const targetMode = currentMode === 'manual' ? 'manual' : 'auto';
+    sendModeCommand(targetMode).catch(() => {
+      console.warn('Failed to sync ESP mode on reconnect.', targetMode);
+    });
     setConnectionState('CONNECTED', true);
+    syncSimulateButtonState();
+    if (targetMode === 'manual') {
+      setModeState('manual');
+    } else {
+      setModeState('auto');
+    }
     startPolling();
   }
 
@@ -334,6 +394,10 @@
 
   modeButtons.forEach((button) => {
     button.addEventListener('click', async () => {
+      if (simulatedDisconnected) {
+        return;
+      }
+
       const mode = button.dataset.mode;
       modeButtons.forEach((btn) => btn.classList.toggle('active', btn === button));
       const serverModeChanged = await sendModeCommand(mode);
@@ -346,7 +410,7 @@
 
   if (manualToggle) {
     manualToggle.addEventListener('click', async () => {
-      if (manualToggle.disabled) return;
+      if (manualToggle.disabled || simulatedDisconnected) return;
 
       const nextState = !manualPowerOn;
       pendingManualState = nextState;
@@ -381,12 +445,12 @@
 
   if (simulateBtn) {
     syncSimulateButtonState();
-    simulateBtn.addEventListener('click', () => {
-      if (statusEl.textContent === 'CONNECTED' || simulateBtn.textContent === 'DISCONNECT') {
-        disconnectDevice();
+    simulateBtn.addEventListener('click', async () => {
+      if (simulatedDisconnected || !userConnected) {
         return;
       }
-      connectDevice();
+
+      await disconnectDevice();
     });
   }
 })();
